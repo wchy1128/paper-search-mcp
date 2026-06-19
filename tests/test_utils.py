@@ -48,6 +48,15 @@ class TestStableId(unittest.TestCase):
         # md5("foo") = acbd18db4ccabf85..., so first 8 hex chars are acbd18db.
         self.assertEqual(stable_id("citeseerx", "foo"), "citeseerx_acbd18db")
 
+    def test_custom_separator(self):
+        # Sources whose historical id format used a colon (e.g. SSRN) can keep
+        # it, so primary and fallback ids share the same prefix.
+        self.assertEqual(
+            stable_id("ssrn", "https://example.com/x", separator=":"),
+            "ssrn:" + stable_id("ssrn", "https://example.com/x").split("_", 1)[1],
+        )
+        self.assertTrue(stable_id("ssrn", "u", separator=":").startswith("ssrn:"))
+
 
 class TestSafeFilename(unittest.TestCase):
     def test_replaces_slash(self):

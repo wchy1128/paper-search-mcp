@@ -353,7 +353,7 @@ class SSRNSearcher(PaperSource):
             return Paper(
                 # Keep the historical "ssrn:" separator so fallback ids share the
                 # same prefix as the primary abstract-id path above.
-                paper_id=paper_id or stable_id("ssrn", raw_url).replace("ssrn_", "ssrn:", 1),
+                paper_id=paper_id or stable_id("ssrn", raw_url, separator=":"),
                 title=title,
                 authors=authors,
                 abstract=abstract,

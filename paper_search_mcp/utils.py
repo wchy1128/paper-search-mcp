@@ -10,7 +10,7 @@ def extract_doi(text: str) -> str:
     return match.group(0).rstrip(".,;)") if match else ""
 
 
-def stable_id(prefix: str, text: str, length: int = 8) -> str:
+def stable_id(prefix: str, text: str, length: int = 8, separator: str = "_") -> str:
     """Build a process-stable paper_id from a prefix and source text.
 
     Uses md5 (deterministic across processes / ``PYTHONHASHSEED``) instead of
@@ -21,12 +21,16 @@ def stable_id(prefix: str, text: str, length: int = 8) -> str:
         prefix: Source tag (e.g. ``"citeseerx"``, ``"dblp"``).
         text: Identifying text (title, URL, ...) to digest.
         length: Number of hex characters to keep from the digest (default 8).
+        separator: String placed between prefix and digest (default ``"_"``).
+            Use ``":"`` for connectors whose historical id format used a colon
+            (e.g. SSRN's ``"ssrn:<id>"``), so primary and fallback ids stay
+            consistent within the same source.
 
     Returns:
-        Identifier of the form ``"{prefix}_{hex}"``.
+        Identifier of the form ``"{prefix}{separator}{hex}"``.
     """
     digest = hashlib.md5((text or "").encode("utf-8")).hexdigest()[:length]
-    return f"{prefix}_{digest}"
+    return f"{prefix}{separator}{digest}"
 
 
 def safe_filename(filename_hint: str, default: str = "paper") -> str:
