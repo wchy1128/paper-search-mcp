@@ -75,6 +75,17 @@ async def async_search(searcher, query: str, max_results: int, **kwargs) -> List
     return [paper.to_dict() for paper in papers]
 
 
+# Run blocking PDF download / read methods in a thread pool so a single slow
+# download cannot stall the MCP server's event loop (and every other tool call).
+async def async_download(searcher, paper_id: str, save_path: str) -> str:
+    return await asyncio.to_thread(searcher.download_pdf, paper_id, save_path)
+
+
+async def async_read(searcher, paper_id: str, save_path: str) -> str:
+    return await asyncio.to_thread(searcher.read_paper, paper_id, save_path)
+
+
+
 ALL_SOURCES = [
     "arxiv",
     "pubmed",
@@ -469,7 +480,7 @@ async def download_pubmed(paper_id: str, save_path: str = "./downloads") -> str:
         str: Message indicating that direct PDF download is not supported.
     """
     try:
-        return pubmed_searcher.download_pdf(paper_id, save_path)
+        return await async_download(pubmed_searcher, paper_id, save_path)
     except NotImplementedError as e:
         return str(e)
 
@@ -484,7 +495,7 @@ async def download_biorxiv(paper_id: str, save_path: str = "./downloads") -> str
     Returns:
         Path to the downloaded PDF file.
     """
-    return biorxiv_searcher.download_pdf(paper_id, save_path)
+    return await async_download(biorxiv_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -497,7 +508,7 @@ async def download_medrxiv(paper_id: str, save_path: str = "./downloads") -> str
     Returns:
         Path to the downloaded PDF file.
     """
-    return medrxiv_searcher.download_pdf(paper_id, save_path)
+    return await async_download(medrxiv_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -510,7 +521,7 @@ async def download_iacr(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         Path to the downloaded PDF file.
     """
-    return iacr_searcher.download_pdf(paper_id, save_path)
+    return await async_download(iacr_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -524,7 +535,7 @@ async def read_arxiv_paper(paper_id: str, save_path: str = "./downloads") -> str
         str: The extracted text content of the paper.
     """
     try:
-        return arxiv_searcher.read_paper(paper_id, save_path)
+        return await async_read(arxiv_searcher, paper_id, save_path)
     except Exception as e:
         logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
@@ -540,7 +551,7 @@ async def read_pubmed_paper(paper_id: str, save_path: str = "./downloads") -> st
     Returns:
         str: Message indicating that direct paper reading is not supported.
     """
-    return pubmed_searcher.read_paper(paper_id, save_path)
+    return await async_read(pubmed_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -554,7 +565,7 @@ async def read_biorxiv_paper(paper_id: str, save_path: str = "./downloads") -> s
         str: The extracted text content of the paper.
     """
     try:
-        return biorxiv_searcher.read_paper(paper_id, save_path)
+        return await async_read(biorxiv_searcher, paper_id, save_path)
     except Exception as e:
         logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
@@ -571,7 +582,7 @@ async def read_medrxiv_paper(paper_id: str, save_path: str = "./downloads") -> s
         str: The extracted text content of the paper.
     """
     try:
-        return medrxiv_searcher.read_paper(paper_id, save_path)
+        return await async_read(medrxiv_searcher, paper_id, save_path)
     except Exception as e:
         logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
@@ -588,7 +599,7 @@ async def read_iacr_paper(paper_id: str, save_path: str = "./downloads") -> str:
         str: The extracted text content of the paper.
     """
     try:
-        return iacr_searcher.read_paper(paper_id, save_path)
+        return await async_read(iacr_searcher, paper_id, save_path)
     except Exception as e:
         logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
@@ -629,8 +640,8 @@ async def download_semantic(paper_id: str, save_path: str = "./downloads") -> st
         save_path: Directory to save the PDF (default: './downloads').
     Returns:
         Path to the downloaded PDF file.
-    """ 
-    return semantic_searcher.download_pdf(paper_id, save_path)
+    """
+    return await async_download(semantic_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -652,7 +663,7 @@ async def read_semantic_paper(paper_id: str, save_path: str = "./downloads") -> 
         str: The extracted text content of the paper.
     """
     try:
-        return semantic_searcher.read_paper(paper_id, save_path)
+        return await async_read(semantic_searcher, paper_id, save_path)
     except Exception as e:
         logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
@@ -718,7 +729,7 @@ async def download_crossref(paper_id: str, save_path: str = "./downloads") -> st
         Use the DOI to access the paper through the publisher's website.
     """
     try:
-        return crossref_searcher.download_pdf(paper_id, save_path)
+        return await async_download(crossref_searcher, paper_id, save_path)
     except NotImplementedError as e:
         return str(e)
 
@@ -852,7 +863,7 @@ async def read_crossref_paper(paper_id: str, save_path: str = "./downloads") -> 
         CrossRef is a citation database and doesn't provide direct paper content.
         Use the DOI to access the paper through the publisher's website.
     """
-    return crossref_searcher.read_paper(paper_id, save_path)
+    return await async_read(crossref_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1055,7 +1066,7 @@ async def read_dblp_paper(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Message indicating that direct paper reading is not supported.
     """
-    return dblp_searcher.read_paper(paper_id, save_path)
+    return await async_read(dblp_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1071,7 +1082,7 @@ async def download_dblp(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Message indicating that direct PDF download is not supported.
     """
-    return dblp_searcher.download_pdf(paper_id, save_path)
+    return await async_download(dblp_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1084,7 +1095,7 @@ async def read_openaire_paper(paper_id: str, save_path: str = "./downloads") -> 
     Returns:
         str: Extracted text or error message.
     """
-    return openaire_searcher.read_paper(paper_id, save_path)
+    return await async_read(openaire_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1097,7 +1108,7 @@ async def download_openaire(paper_id: str, save_path: str = "./downloads") -> st
     Returns:
         str: Path to downloaded PDF or error message.
     """
-    return openaire_searcher.download_pdf(paper_id, save_path)
+    return await async_download(openaire_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1110,7 +1121,7 @@ async def read_citeseerx_paper(paper_id: str, save_path: str = "./downloads") ->
     Returns:
         str: Extracted text or fallback abstract/error message.
     """
-    return citeseerx_searcher.read_paper(paper_id, save_path)
+    return await async_read(citeseerx_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1123,7 +1134,7 @@ async def download_citeseerx(paper_id: str, save_path: str = "./downloads") -> s
     Returns:
         str: Path to downloaded PDF or error message.
     """
-    return citeseerx_searcher.download_pdf(paper_id, save_path)
+    return await async_download(citeseerx_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1136,7 +1147,7 @@ async def read_doaj_paper(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Extracted text content.
     """
-    return doaj_searcher.read_paper(paper_id, save_path)
+    return await async_read(doaj_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1149,7 +1160,7 @@ async def download_doaj(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Path to downloaded PDF.
     """
-    return doaj_searcher.download_pdf(paper_id, save_path)
+    return await async_download(doaj_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1162,7 +1173,7 @@ async def read_base_paper(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Extracted text content.
     """
-    return base_searcher.read_paper(paper_id, save_path)
+    return await async_read(base_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1175,7 +1186,7 @@ async def download_base(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Path to downloaded PDF.
     """
-    return base_searcher.download_pdf(paper_id, save_path)
+    return await async_download(base_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1188,7 +1199,7 @@ async def read_zenodo_paper(paper_id: str, save_path: str = "./downloads") -> st
     Returns:
         str: Extracted text content.
     """
-    return zenodo_searcher.read_paper(paper_id, save_path)
+    return await async_read(zenodo_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1201,7 +1212,7 @@ async def download_zenodo(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Path to downloaded PDF.
     """
-    return zenodo_searcher.download_pdf(paper_id, save_path)
+    return await async_download(zenodo_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1214,7 +1225,7 @@ async def read_hal_paper(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Extracted text content.
     """
-    return hal_searcher.read_paper(paper_id, save_path)
+    return await async_read(hal_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1227,7 +1238,7 @@ async def download_hal(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Path to downloaded PDF.
     """
-    return hal_searcher.download_pdf(paper_id, save_path)
+    return await async_download(hal_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1242,7 +1253,7 @@ async def read_ssrn_paper(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Error message from metadata-only SSRN connector.
     """
-    return ssrn_searcher.read_paper(paper_id, save_path)
+    return await async_read(ssrn_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1257,7 +1268,7 @@ async def download_ssrn(paper_id: str, save_path: str = "./downloads") -> str:
     Returns:
         str: Error message from metadata-only SSRN connector.
     """
-    return ssrn_searcher.download_pdf(paper_id, save_path)
+    return await async_download(ssrn_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1270,7 +1281,7 @@ async def read_openalex_paper(paper_id: str, save_path: str = "./downloads") -> 
     Returns:
         str: Message indicating that direct paper reading is not supported natively.
     """
-    return openalex_searcher.read_paper(paper_id, save_path)
+    return await async_read(openalex_searcher, paper_id, save_path)
 
 
 @mcp.tool()
@@ -1324,7 +1335,7 @@ if ieee_searcher is not None:
         Returns:
             str: Extracted text content.
         """
-        return ieee_searcher.read_paper(paper_id, save_path)
+        return await asyncio.to_thread(ieee_searcher.read_paper, paper_id, save_path)
 
 
 # ---------------------------------------------------------------------------
@@ -1365,7 +1376,7 @@ if acm_searcher is not None:
         Returns:
             str: Extracted text content.
         """
-        return acm_searcher.read_paper(paper_id, save_path)
+        return await asyncio.to_thread(acm_searcher.read_paper, paper_id, save_path)
 
 
 def main():

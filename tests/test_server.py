@@ -2,6 +2,8 @@
 import unittest
 import asyncio
 import os
+import threading
+from unittest.mock import patch
 from paper_search_mcp import server
 
 class TestPaperSearchServer(unittest.TestCase):
@@ -46,6 +48,39 @@ class TestPaperSearchServer(unittest.TestCase):
             self.assertIsInstance(result, str, f"Result for {paper_id} should be a file path")
             self.assertTrue(result.endswith(".pdf"), f"Result for {paper_id} should be a PDF file path")
             self.assertTrue(os.path.exists(result), f"PDF file for {paper_id} should exist on disk")
+
+    def test_download_tool_runs_off_the_event_loop_thread(self):
+        """download_* tools must run the blocking searcher call in a worker
+        thread (asyncio.to_thread), not on the event loop's main thread.
+        Otherwise a single slow download stalls the whole MCP server.
+        """
+        captured = {}
+
+        def fake_download(self, paper_id, save_path):
+            captured["thread"] = threading.current_thread().name
+            return f"{save_path}/fake_{paper_id}.pdf"
+
+        with patch.object(server.BioRxivSearcher, "download_pdf", fake_download):
+            asyncio.run(server.download_biorxiv("10.001/abc", "./downloads"))
+
+        # The event loop runs on the main thread ("MainThread"). If the
+        # download executed there, blocking IO would stall it.
+        self.assertIn("thread", captured)
+        self.assertNotEqual(captured["thread"], threading.main_thread().name)
+
+    def test_read_tool_runs_off_the_event_loop_thread(self):
+        """read_* tools must likewise run the blocking call off the loop thread."""
+        captured = {}
+
+        def fake_read(self, paper_id, save_path="./downloads"):
+            captured["thread"] = threading.current_thread().name
+            return "extracted text"
+
+        with patch.object(server.SemanticSearcher, "read_paper", fake_read):
+            asyncio.run(server.read_semantic_paper("some-paper-id", "./downloads"))
+
+        self.assertIn("thread", captured)
+        self.assertNotEqual(captured["thread"], threading.main_thread().name)
 
 if __name__ == "__main__":
     unittest.main()
