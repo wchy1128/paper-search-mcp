@@ -73,20 +73,25 @@ class GoogleScholarSearcher(PaperSource):
             if not title_elem or not info_elem:
                 return None
 
-            # Process title and URL
-            title = title_elem.get_text(strip=True).replace('[PDF]', '').replace('[HTML]', '')
+            # Process title and URL.
+            # Use separator=' ' so words on opposite sides of a child tag
+            # (e.g. the <b> tags Scholar wraps around query terms) keep the
+            # space between them; get_text(strip=True) would glue them.
+            title = re.sub(r'\s+', ' ', title_elem.get_text(separator=' ', strip=True)).strip()
+            title = title.replace('[PDF]', '').replace('[HTML]', '').strip()
             link = title_elem.find('a', href=True)
             url = link['href'] if link else ''
 
             # Process author info
-            info_text = info_elem.get_text()
+            info_text = info_elem.get_text(separator=' ', strip=True)
             authors = [a.strip() for a in info_text.split('-')[0].split(',')]
             year = self._extract_year(info_text)
+            abstract_text = re.sub(r'\s+', ' ', abstract_elem.get_text(separator=' ', strip=True)).strip() if abstract_elem else ""
             doi = (
                 extract_doi(url)
                 or extract_doi(title)
                 or extract_doi(info_text)
-                or extract_doi(abstract_elem.get_text() if abstract_elem else "")
+                or extract_doi(abstract_text)
             )
 
             # Create paper object
@@ -94,7 +99,7 @@ class GoogleScholarSearcher(PaperSource):
                 paper_id=stable_id("gs", url),
                 title=title,
                 authors=authors,
-                abstract=abstract_elem.get_text() if abstract_elem else "",
+                abstract=abstract_text,
                 url=url,
                 pdf_url="",
                 published_date=datetime(year, 1, 1) if year else None,
