@@ -40,13 +40,17 @@ class OpenAlexSearcher(PaperSource):
             logger.warning(f"Error reconstructing OpenAlex abstract: {e}")
             return ""
 
-    def search(self, query: str, max_results: int = 10) -> List[Paper]:
+    def search(self, query: str, max_results: int = 10, language: Optional[str] = None) -> List[Paper]:
         """
         Search OpenAlex works. Uses the 'search' filter.
 
         Args:
             query: Search query string
             max_results: Maximum results to return (natively max 200 per page)
+            language: Optional ISO 639-1 language code (e.g. 'zh', 'en', 'ja') used to
+                restrict results to that language via OpenAlex's top-level
+                ``filter=language:<code>``. Useful for improving recall of
+                non-English (e.g. Chinese) literature.
 
         Returns:
             List[Paper]: List of found papers with metadata.
@@ -58,6 +62,8 @@ class OpenAlexSearcher(PaperSource):
                 "search": query,
                 "per_page": min(max_results, 200),
             }
+            if language:
+                params["filter"] = f"language:{language}"
 
             response = self.session.get(self.BASE_URL, params=params, timeout=30)
             

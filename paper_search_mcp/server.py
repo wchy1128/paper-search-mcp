@@ -867,16 +867,22 @@ async def read_crossref_paper(paper_id: str, save_path: str = "./downloads") -> 
 
 
 @mcp.tool()
-async def search_openalex(query: str, max_results: int = 10) -> List[Dict]:
+async def search_openalex(query: str, max_results: int = 10, language: Optional[str] = None) -> List[Dict]:
     """Search academic papers from OpenAlex.
 
     Args:
         query: Search query string (e.g., 'machine learning').
         max_results: Maximum number of papers to return (default: 10).
+        language: Optional ISO 639-1 language code (e.g., 'zh', 'en', 'ja') to restrict
+            results to that language via OpenAlex's top-level language filter.
+            Improves recall of non-English literature such as Chinese journals.
     Returns:
         List of paper metadata in dictionary format.
     """
-    papers = await async_search(openalex_searcher, query, max_results)
+    kwargs = {}
+    if language:
+        kwargs["language"] = language
+    papers = await async_search(openalex_searcher, query, max_results, **kwargs)
     return papers if papers else []
 
 

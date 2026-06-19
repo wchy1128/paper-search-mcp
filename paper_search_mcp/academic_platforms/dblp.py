@@ -5,6 +5,7 @@ import requests
 import logging
 import xml.etree.ElementTree as ET
 import time
+from urllib.parse import quote
 from bs4 import BeautifulSoup
 
 from ..paper import Paper
@@ -185,7 +186,7 @@ class DBLPSearcher(PaperSource):
                         doi=doi,
                         published_date=published_date,
                         pdf_url='',
-                        url=paper_url or f"https://dblp.org/search/publ?q={query}",
+                        url=paper_url or f"https://dblp.org/search/publ?q={quote(query, safe='')}",
                         source='dblp',
                         extra={
                             'venue': '',

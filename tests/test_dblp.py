@@ -2,6 +2,7 @@
 import unittest
 import os
 import requests
+from unittest.mock import patch, Mock
 from paper_search_mcp.academic_platforms.dblp import DBLPSearcher
 
 
@@ -116,6 +117,35 @@ class TestDBLPSearcher(unittest.TestCase):
         searcher = DBLPSearcher()
         with self.assertRaises(NotImplementedError):
             searcher.read_paper("test_paper_id", "./downloads")
+
+    def test_fallback_url_percent_encodes_query(self):
+        """The generated dblp search back-link must percent-encode the query,
+        so non-ASCII (e.g. Chinese) or special characters do not break the URL."""
+        searcher = DBLPSearcher()
+        # An entry with a title but no details/ee link -> paper_url stays empty,
+        # so the fallback URL (the one being fixed) is used.
+        html = (
+            '<html><body><div class="publ-list">'
+            '<div class="entry" id="e1"><span class="title">深度学习</span></div>'
+            '</div></body></html>'
+        )
+        resp = Mock()
+        resp.status_code = 200
+        resp.text = html
+        resp.raise_for_status.return_value = None
+
+        with patch.object(searcher.session, "get", return_value=resp):
+            papers = searcher._search_html_fallback("深度学习", max_results=5)
+
+        self.assertEqual(len(papers), 1)
+        url = papers[0].url
+        # The CJK characters must be percent-encoded, not appear raw.
+        self.assertNotIn("深度学习", url)
+        self.assertTrue(url.startswith("https://dblp.org/search/publ?q="))
+        # Decoding should round-trip back to the original query.
+        from urllib.parse import unquote, parse_qs, urlparse
+        qs = parse_qs(urlparse(url).query)
+        self.assertEqual(qs.get("q"), ["深度学习"])
 
     def test_search_computer_science_topics(self):
         if not self.api_accessible:
