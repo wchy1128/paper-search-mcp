@@ -45,6 +45,28 @@ class TestSemanticSearcher(unittest.TestCase):
             self.assertTrue(expected_path.exists())
             self.assertEqual(expected_path.read_bytes(), b"%PDF-1.4 test content")
 
+    def test_download_pdf_sanitizes_windows_illegal_chars_in_paper_id(self):
+        """Semantic IDs like 'DOI:10.18653/v1/N18-3011' contain ':' which is
+        illegal in Windows filenames; the saved name must strip it."""
+        paper = SimpleNamespace(pdf_url="https://example.com/paper.pdf")
+        response = Mock()
+        response.content = b"%PDF-1.4 bytes"
+        response.raise_for_status.return_value = None
+
+        with tempfile.TemporaryDirectory(prefix="semantic_win_") as test_dir:
+            with patch.object(self.searcher, "get_paper_details", return_value=paper):
+                with patch("paper_search_mcp.academic_platforms.semantic.requests.get", return_value=response):
+                    result = self.searcher.download_pdf("DOI:10.18653/v1/N18-3011", test_dir)
+
+            # File must actually be written while the temp dir still exists.
+            self.assertTrue(Path(result).exists())
+
+        # The returned path must not contain ':' or '/' as a filename component.
+        filename = Path(result).name
+        self.assertNotIn(":", filename)
+        self.assertNotIn("/", filename)
+        self.assertTrue(filename.startswith("semantic_DOI_"))
+
     def test_parse_paper_handles_missing_publication_date(self):
         item = {
             "paperId": "paper-123",

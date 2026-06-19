@@ -8,7 +8,7 @@ import time
 from bs4 import BeautifulSoup
 
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, stable_id
 from .base import PaperSource
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ class DBLPSearcher(PaperSource):
                         if text and text not in authors and len(text) < 120:
                             authors.append(text)
 
-                    entry_id = entry.get('id') or f"dblp_{hash(title) & 0xffffffff:08x}"
+                    entry_id = entry.get('id') or stable_id("dblp", title)
 
                     papers.append(Paper(
                         paper_id=entry_id,
@@ -287,7 +287,7 @@ class DBLPSearcher(PaperSource):
 
             if not paper_id:
                 # Generate ID from title and authors
-                paper_id = f"dblp_{hash(title) & 0xffffffff:08x}"
+                paper_id = stable_id("dblp", title)
 
             # Construct PDF URL - dblp doesn't provide direct PDF links
             # but we can try to find PDF through other sources

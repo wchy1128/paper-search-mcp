@@ -29,6 +29,7 @@ from bs4 import BeautifulSoup
 
 from .base import PaperSource
 from ..paper import Paper
+from ..utils import stable_id
 
 logger = logging.getLogger(__name__)
 
@@ -350,7 +351,9 @@ class SSRNSearcher(PaperSource):
             pub_date = date_tag.get_text(strip=True) if date_tag else ""
 
             return Paper(
-                paper_id=paper_id or f"ssrn:{hash(raw_url)}",
+                # Keep the historical "ssrn:" separator so fallback ids share the
+                # same prefix as the primary abstract-id path above.
+                paper_id=paper_id or stable_id("ssrn", raw_url).replace("ssrn_", "ssrn:", 1),
                 title=title,
                 authors=authors,
                 abstract=abstract,

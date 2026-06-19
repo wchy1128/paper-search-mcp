@@ -6,7 +6,7 @@ import time
 import random
 import re
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, stable_id
 from ..config import get_env
 from .base import PaperSource
 import logging
@@ -91,7 +91,7 @@ class GoogleScholarSearcher(PaperSource):
 
             # Create paper object
             return Paper(
-                paper_id=f"gs_{hash(url)}",
+                paper_id=stable_id("gs", url),
                 title=title,
                 authors=authors,
                 abstract=abstract_elem.get_text() if abstract_elem else "",

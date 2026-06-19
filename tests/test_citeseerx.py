@@ -68,6 +68,24 @@ class TestCiteSeerXSearcher(unittest.TestCase):
         paper = self.searcher._parse_citeseerx_result({"info": {}})
         self.assertIsNone(paper)
 
+    def test_parse_generates_stable_id_when_no_native_id(self):
+        """When no `id`/DOI is present, the fallback id must be stable across calls."""
+        result = {
+            "info": {
+                "title": "Stable ID Paper",
+                "authors": [{"name": "Alice"}],
+                "abstract": "No id field here.",
+            }
+        }
+        paper_a = self.searcher._parse_citeseerx_result(result)
+        paper_b = self.searcher._parse_citeseerx_result(result)
+        self.assertIsNotNone(paper_a)
+        self.assertIsNotNone(paper_b)
+        # Process-stable: same input yields identical id (replaces the old
+        # PYTHONHASHSEED-dependent hash() fallback).
+        self.assertEqual(paper_a.paper_id, paper_b.paper_id)
+        self.assertTrue(paper_a.paper_id.startswith("citeseerx_"))
+
     def test_archive_redirect_returns_empty_search(self):
         """_get should raise HTTPError when the API redirects to web.archive.org."""
         archive_response = Mock()

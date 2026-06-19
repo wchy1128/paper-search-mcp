@@ -104,10 +104,8 @@ class CrossRefSearcher(PaperSource):
                 published_date = self._extract_date(item, 'issued')
             if not published_date:
                 published_date = self._extract_date(item, 'created')
-            
-            # Default to epoch if no date found
-            if not published_date:
-                published_date = datetime(1970, 1, 1)
+            # Keep None when no date is available; a sentinel like epoch
+            # (1970-01-01) would pollute downstream sorting/year filters.
             
             # Extract URLs
             url = item.get('URL', f"https://doi.org/{doi}" if doi else '')
@@ -313,7 +311,7 @@ if __name__ == "__main__":
         for i, paper in enumerate(papers, 1):
             print(f"{i}. {paper.title} (DOI: {paper.doi})")
             print(f"   Authors: {', '.join(paper.authors[:3])}{'...' if len(paper.authors) > 3 else ''}")
-            print(f"   Published: {paper.published_date.year}")
+            print(f"   Published: {paper.published_date.year if paper.published_date else 'N/A'}")
             print(f"   Citations: {paper.citations}")
             publisher = paper.extra.get('publisher', 'N/A') if paper.extra else 'N/A'
             print(f"   Publisher: {publisher}")

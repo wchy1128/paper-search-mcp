@@ -3,7 +3,6 @@ from typing import List, Dict, Optional, Any
 import asyncio
 import os
 import logging
-import re
 import httpx
 from mcp.server.fastmcp import FastMCP
 from .config import get_env
@@ -29,7 +28,7 @@ from .academic_platforms.unpaywall import UnpaywallResolver, UnpaywallSearcher
 from .academic_platforms.zenodo import ZenodoSearcher
 from .academic_platforms.hal import HALSearcher
 from .academic_platforms.ssrn import SSRNSearcher
-from .utils import extract_doi
+from .utils import extract_doi, safe_filename as _safe_filename
 
 # from .academic_platforms.hub import SciHubSearcher
 from .paper import Paper
@@ -160,13 +159,6 @@ def _dedupe_papers(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         deduped.append(paper)
 
     return deduped
-
-
-def _safe_filename(filename_hint: str, default: str = "paper") -> str:
-    safe = re.sub(r"[^a-zA-Z0-9._-]+", "_", filename_hint).strip("._")
-    if not safe:
-        return default
-    return safe[:120]
 
 
 async def _download_from_url(pdf_url: str, save_path: str, filename_hint: str = "paper") -> Optional[str]:
@@ -534,7 +526,7 @@ async def read_arxiv_paper(paper_id: str, save_path: str = "./downloads") -> str
     try:
         return arxiv_searcher.read_paper(paper_id, save_path)
     except Exception as e:
-        print(f"Error reading paper {paper_id}: {e}")
+        logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
 
 
@@ -564,7 +556,7 @@ async def read_biorxiv_paper(paper_id: str, save_path: str = "./downloads") -> s
     try:
         return biorxiv_searcher.read_paper(paper_id, save_path)
     except Exception as e:
-        print(f"Error reading paper {paper_id}: {e}")
+        logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
 
 
@@ -581,7 +573,7 @@ async def read_medrxiv_paper(paper_id: str, save_path: str = "./downloads") -> s
     try:
         return medrxiv_searcher.read_paper(paper_id, save_path)
     except Exception as e:
-        print(f"Error reading paper {paper_id}: {e}")
+        logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
 
 
@@ -598,7 +590,7 @@ async def read_iacr_paper(paper_id: str, save_path: str = "./downloads") -> str:
     try:
         return iacr_searcher.read_paper(paper_id, save_path)
     except Exception as e:
-        print(f"Error reading paper {paper_id}: {e}")
+        logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
 
 
@@ -662,7 +654,7 @@ async def read_semantic_paper(paper_id: str, save_path: str = "./downloads") -> 
     try:
         return semantic_searcher.read_paper(paper_id, save_path)
     except Exception as e:
-        print(f"Error reading paper {paper_id}: {e}")
+        logger.warning(f"Error reading paper {paper_id}: {e}")
         return ""
 
 

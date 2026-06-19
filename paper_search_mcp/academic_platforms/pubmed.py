@@ -1,5 +1,6 @@
 # paper_search_mcp/sources/pubmed.py
 from typing import List
+import logging
 import requests
 from xml.etree import ElementTree as ET
 from datetime import datetime
@@ -8,12 +9,25 @@ from ..utils import extract_doi
 from .base import PaperSource
 import os
 
+logger = logging.getLogger(__name__)
+
 class PubMedSearcher(PaperSource):
     """Searcher for PubMed papers"""
     SEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     FETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
     def search(self, query: str, max_results: int = 10, sort: str = 'relevance') -> List[Paper]:
+        try:
+            return self._do_search(query, max_results, sort)
+        except requests.RequestException as e:
+            logger.warning(f"PubMed request failed: {e}")
+            return []
+        except ET.ParseError as e:
+            # NCBI occasionally returns an HTML error page instead of XML.
+            logger.warning(f"PubMed response was not valid XML: {e}")
+            return []
+
+    def _do_search(self, query: str, max_results: int, sort: str) -> List[Paper]:
         search_params = {
             'db': 'pubmed',
             'term': query,
@@ -21,7 +35,7 @@ class PubMedSearcher(PaperSource):
             'retmode': 'xml',
             'sort': sort,
         }
-        search_response = requests.get(self.SEARCH_URL, params=search_params)
+        search_response = requests.get(self.SEARCH_URL, params=search_params, timeout=30)
         search_root = ET.fromstring(search_response.content)
         ids = [id.text for id in search_root.findall('.//Id') if id.text]
         if not ids:
@@ -32,7 +46,7 @@ class PubMedSearcher(PaperSource):
             'id': ','.join(ids),
             'retmode': 'xml'
         }
-        fetch_response = requests.get(self.FETCH_URL, params=fetch_params)
+        fetch_response = requests.get(self.FETCH_URL, params=fetch_params, timeout=30)
         fetch_root = ET.fromstring(fetch_response.content)
         
         papers = []

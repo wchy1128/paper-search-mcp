@@ -9,7 +9,7 @@ import time
 from requests.exceptions import SSLError
 
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, stable_id
 from ..config import get_env
 from .base import PaperSource
 
@@ -394,7 +394,7 @@ class OpenAiresearcher(PaperSource):
                     break
 
             obj_ids = self._direct_texts(header, 'objIdentifier')
-            paper_id = obj_ids[0] if obj_ids else f"openaire_{hash(title) & 0xffffffff:08x}"
+            paper_id = obj_ids[0] if obj_ids else stable_id("openaire", title)
 
             if not url:
                 url = f"https://explore.openaire.eu/search/publication?articleId={paper_id}"
@@ -575,7 +575,7 @@ class OpenAiresearcher(PaperSource):
                 paper_id = paper_id[0].get('value', '') if isinstance(paper_id[0], dict) else str(paper_id[0])
 
             if not paper_id:
-                paper_id = f"openaire_{hash(title) & 0xffffffff:08x}"
+                paper_id = stable_id("openaire", title)
 
             # Extract PDF URL
             pdf_url = ''

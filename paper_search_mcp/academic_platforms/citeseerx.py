@@ -1,6 +1,7 @@
 # paper_search_mcp/academic_platforms/citeseerx.py
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import os
 import requests
 import logging
 import json
@@ -10,7 +11,7 @@ from requests.exceptions import SSLError
 import urllib3
 
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, stable_id
 from ..config import get_env
 from .base import PaperSource
 
@@ -210,7 +211,7 @@ class CiteSeerXSearcher(PaperSource):
                 if doi:
                     paper_id = f"citeseerx_{doi.replace('/', '_')}"
                 else:
-                    paper_id = f"citeseerx_{hash(title) & 0xffffffff:08x}"
+                    paper_id = stable_id("citeseerx", title)
 
             # Construct URLs
             url = info.get('url', '')

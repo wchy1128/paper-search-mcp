@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import time
 import random
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, safe_filename
 from .base import PaperSource
 import logging
 from pypdf import PdfReader
@@ -386,7 +386,7 @@ class SemanticSearcher(PaperSource):
             # Create download directory if it doesn't exist
             os.makedirs(save_path, exist_ok=True)
 
-            filename = f"semantic_{paper_id.replace('/', '_')}.pdf"
+            filename = f"semantic_{safe_filename(paper_id)}.pdf"
             pdf_path = os.path.join(save_path, filename)
 
             with open(pdf_path, "wb") as f:
@@ -417,7 +417,7 @@ class SemanticSearcher(PaperSource):
         """
         try:
             os.makedirs(save_path, exist_ok=True)
-            filename = f"semantic_{paper_id.replace('/', '_')}.pdf"
+            filename = f"semantic_{safe_filename(paper_id)}.pdf"
             pdf_path = os.path.join(save_path, filename)
 
             if not os.path.exists(pdf_path):

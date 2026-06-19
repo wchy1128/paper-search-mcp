@@ -23,6 +23,19 @@ class TestCrossRefSearcher(unittest.TestCase):
     def setUp(self):
         self.searcher = CrossRefSearcher()
 
+    def test_parse_item_without_date_yields_none(self):
+        """A CrossRef item with no date fields must yield published_date=None,
+        not a sentinel like datetime(1970, 1, 1) that pollutes year filters."""
+        item = {
+            "DOI": "10.1000/no-date",
+            "title": ["Dateless Paper"],
+            "author": [{"given": "Alice", "family": "Smith"}],
+            # intentionally no 'published', 'issued', or 'created' date fields
+        }
+        paper = self.searcher._parse_crossref_item(item)
+        self.assertIsNotNone(paper)
+        self.assertIsNone(paper.published_date)
+
     def test_search(self):
         if not self.api_accessible:
             self.skipTest("CrossRef API is not accessible")

@@ -14,7 +14,7 @@ import logging
 import time
 from urllib.parse import quote
 from ..paper import Paper
-from ..utils import extract_doi
+from ..utils import extract_doi, stable_id
 from ..config import get_env
 from .base import PaperSource
 
@@ -324,7 +324,7 @@ class DOAJSearcher(PaperSource):
 
             # Create Paper object
             paper = Paper(
-                paper_id=item.get('id', '') or doi or f"doaj_{hash(title) & 0xffffffff:08x}",
+                paper_id=item.get('id', '') or doi or stable_id("doaj", title),
                 title=title,
                 authors=authors,
                 abstract=abstract,
